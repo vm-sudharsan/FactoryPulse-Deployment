@@ -7,6 +7,8 @@ const AnalysisReport = require('../models/AnalysisReport');
 class MLController {
   constructor() {
     this.mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:5001';
+    // ML analysis can take time for large datasets - use configurable timeout
+    this.mlTimeout = parseInt(process.env.ML_TIMEOUT || '120000'); // Default 120 seconds
   }
 
   async analyzeCSV(req, res) {
@@ -135,14 +137,22 @@ class MLController {
       formData.append('machine_name', machineName);
       formData.append('machine_id', machineId.toString());
 
+      console.log(`Sending CSV to ML service (timeout: ${this.mlTimeout}ms)...`);
+      const startTime = Date.now();
+      
       const response = await axios.post(
         `${this.mlServiceUrl}/analyze`,
         formData,
         {
           headers: formData.getHeaders(),
-          timeout: 30000
+          timeout: this.mlTimeout,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
         }
       );
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`✓ ML analysis completed in ${processingTime}ms`);
 
       // Clean up uploaded file
       try {
@@ -200,6 +210,16 @@ class MLController {
 
       console.error('ML analysis error:', error.message);
       
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        return res.status(504).json({
+          success: false,
+          message: 'ML analysis timeout',
+          error: `Analysis took longer than ${this.mlTimeout/1000} seconds. Try with a smaller dataset or contact support.`,
+          hint: 'For large datasets, consider splitting the analysis into smaller time ranges'
+        });
+      }
+      
       if (error.response) {
         return res.status(error.response.status).json(
           error.response.data
@@ -234,7 +254,7 @@ class MLController {
         formData,
         {
           headers: formData.getHeaders(),
-          timeout: 10000
+          timeout: 30000 // Validation is faster, keep at 30s
         }
       );
 
