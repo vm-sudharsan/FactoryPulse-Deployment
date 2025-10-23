@@ -22,8 +22,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # CORS Configuration
-allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:8080').split(',')
-CORS(app, origins=allowed_origins, supports_credentials=True)
+cors_origins_str = os.getenv('CORS_ORIGINS', 'http://localhost:8080,https://factory-pulse.netlify.app,https://factorypulse-backend.onrender.com')
+allowed_origins = [origin.strip() for origin in cors_origins_str.split(',') if origin.strip()]
+logger.info(f'CORS allowed origins: {allowed_origins}')
+
+CORS(app, 
+     origins=allowed_origins, 
+     supports_credentials=True,
+     allow_headers=['Content-Type', 'Authorization'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 ALLOWED_EXTENSIONS = {'csv'}
