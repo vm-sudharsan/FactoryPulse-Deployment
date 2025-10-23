@@ -2,7 +2,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://factory-pulse.netlify.app/',
+  origin: process.env.FRONTEND_URL || 'https://factory-pulse.netlify.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
