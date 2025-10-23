@@ -37,6 +37,22 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/', methods=['GET', 'HEAD'])
+def root():
+    """Root endpoint - Service information and health status"""
+    return jsonify({
+        'service': 'FactoryPulse ML Service',
+        'version': '1.0.0',
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'endpoints': {
+            'health': '/health',
+            'analyze': 'POST /analyze',
+            'validate': 'POST /validate-csv'
+        },
+        'message': 'ML Service is running'
+    }), 200
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for monitoring"""
@@ -187,5 +203,7 @@ if __name__ == '__main__':
     logger.info(f'Starting ML Service on port {port}...')
     logger.info(f'Environment: {os.getenv("FLASK_ENV", "development")}')
     logger.info(f'CORS Origins: {allowed_origins}')
+    logger.info(f'Root endpoint available at: http://0.0.0.0:{port}/')
+    logger.info(f'Health check available at: http://0.0.0.0:{port}/health')
     
     app.run(host='0.0.0.0', port=port, debug=debug)
