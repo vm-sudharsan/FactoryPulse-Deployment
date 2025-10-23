@@ -4,13 +4,18 @@ require('dotenv').config();
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://factory-pulse.netlify.app',
-  'https://factory-pulse.netlify.app/',
   'http://localhost:3000'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) return callback(null, true);
+
+    const isAllowed = allowedOrigins.some(
+      o => o.toLowerCase() === origin.toLowerCase()
+    );
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.log('CORS blocked request from:', origin);
@@ -21,7 +26,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   optionsSuccessStatus: 200,
-  maxAge: 3600,
+  maxAge: 3600
 };
 
 module.exports = cors(corsOptions);
