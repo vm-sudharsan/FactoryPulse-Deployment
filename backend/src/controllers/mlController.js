@@ -7,8 +7,9 @@ const AnalysisReport = require('../models/AnalysisReport');
 class MLController {
   constructor() {
     this.mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:5001';
-    // ML analysis can take time for large datasets - use configurable timeout
-    this.mlTimeout = parseInt(process.env.ML_TIMEOUT || '120000'); // Default 120 seconds
+    // ML analysis can take time for large datasets - match Gunicorn timeout (480s)
+    // Keep slightly lower than Gunicorn to get proper timeout response
+    this.mlTimeout = parseInt(process.env.ML_TIMEOUT || '450000'); // Default 450 seconds (7.5 min)
   }
 
   async analyzeCSV(req, res) {
@@ -209,6 +210,8 @@ class MLController {
       }
 
       console.error('ML analysis error:', error.message);
+      console.error('Error code:', error.code);
+      console.error('ML Service URL:', this.mlServiceUrl);
       
       // Handle timeout specifically
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
@@ -217,6 +220,17 @@ class MLController {
           message: 'ML analysis timeout',
           error: `Analysis took longer than ${this.mlTimeout/1000} seconds. Try with a smaller dataset or contact support.`,
           hint: 'For large datasets, consider splitting the analysis into smaller time ranges'
+        });
+      }
+      
+      // Handle connection errors
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+        return res.status(503).json({
+          success: false,
+          message: 'ML service unavailable',
+          error: `Cannot connect to ML service at ${this.mlServiceUrl}`,
+          hint: 'The ML service may be starting up or experiencing issues. Please try again in a moment.',
+          technicalDetails: error.message
         });
       }
       
@@ -229,7 +243,8 @@ class MLController {
       return res.status(500).json({
         success: false,
         message: 'ML service error',
-        error: error.message
+        error: error.message,
+        hint: 'An unexpected error occurred. Please check the server logs.'
       });
     }
   }

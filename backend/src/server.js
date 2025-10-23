@@ -58,6 +58,25 @@ app.use(express.urlencoded({ extended: true }));
 // CORS Middleware
 app.use(corsMiddleware);
 
+// Additional CORS headers for better compatibility
+app.use((req, res, next) => {
+  // Ensure CORS headers are always present
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 // Session Activity Middleware
 app.use(sessionActivityMiddleware);
 

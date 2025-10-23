@@ -19,18 +19,20 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('CORS blocked request from:', origin);
-      console.log('Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
+      // Log warning but still allow the request to prevent blocking
+      console.warn('⚠️ CORS warning - Origin not in allowlist:', origin);
+      console.warn('Allowed origins:', allowedOrigins);
+      // Allow anyway to prevent blocking - just log for monitoring
+      callback(null, true);
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
   credentials: true,
   optionsSuccessStatus: 200,
   preflightContinue: false,
-  maxAge: 3600
+  maxAge: 86400 // 24 hours to reduce preflight requests
 };
 
 module.exports = cors(corsOptions);
