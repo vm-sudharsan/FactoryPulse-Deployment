@@ -1,10 +1,9 @@
 #include <WiFi.h>
 #include <ThingSpeak.h>
 
-const char* ssid = "Home Net - 2.4G";
-const char* password = "Password";
-// const char* ssid = "MINION";
-// const char* password = "sudharsan$";
+const char* ssidList[] = {"Home Net - 2.4G", "MINION", "."};
+const char* passList[] = {"Password", "sudharsan$", "1234567890"};
+const int wifiCount = 3;
 
 unsigned long channelid = 3054992;
 const char* writekey = "37ZB71XBU3N9I2BE";
@@ -30,26 +29,59 @@ bool machinestate = false;
 WiFiClient client;
 
 void connectwifi() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Connecting to WiFi...");
-    WiFi.begin(ssid, password);
-    int retry = 0;
-    while (WiFi.status() != WL_CONNECTED && retry < 30) {
-      delay(500);
-      retry++;
-    }
-    if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("WiFi Connected");
-      Serial.print("IP Address: ");
-      Serial.println(WiFi.localIP());
-    } else {
-      Serial.println("WiFi Connection Failed");
-    }
-  } else {
+  if (WiFi.status() == WL_CONNECTED) {
     if (millis() - lastwifilog >= 60000) {
       lastwifilog = millis();
       Serial.println("WiFi Connected");
     }
+    return;
+  }
+
+  Serial.println("Scanning for available WiFi networks...");
+  int n = WiFi.scanNetworks();
+  if (n <= 0) {
+    Serial.println("No networks found");
+    return;
+  }
+
+  int bestIndex = -1;
+  int bestSignal = -1000;
+  for (int i = 0; i < wifiCount; i++) {
+    for (int j = 0; j < n; j++) {
+      if (WiFi.SSID(j) == ssidList[i]) {
+        int rssi = WiFi.RSSI(j);
+        if (rssi > bestSignal) {
+          bestSignal = rssi;
+          bestIndex = i;
+        }
+      }
+    }
+  }
+
+  if (bestIndex == -1) {
+    Serial.println("No known networks found nearby");
+    return;
+  }
+
+  Serial.print("Connecting to best WiFi: ");
+  Serial.println(ssidList[bestIndex]);
+
+  WiFi.begin(ssidList[bestIndex], passList[bestIndex]);
+  int retry = 0;
+  while (WiFi.status() != WL_CONNECTED && retry < 30) {
+    delay(500);
+    Serial.print(".");
+    retry++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi Connected");
+    Serial.print("Connected to: ");
+    Serial.println(ssidList[bestIndex]);
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nWiFi Connection Failed");
   }
 }
 
@@ -107,14 +139,13 @@ void setup() {
   delay(2000);
 
   pinMode(controlpin, OUTPUT);
-  // digitalWrite(controlpin, LOW);
   digitalWrite(controlpin, HIGH);
   Serial.println("System Init");
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
   connectwifi();
-  
+
   delay(2000);
   ThingSpeak.begin(client);
 
